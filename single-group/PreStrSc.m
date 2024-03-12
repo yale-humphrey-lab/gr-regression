@@ -1,0 +1,138 @@
+%
+%** PAR
+%
+% c   = PAR(1);						% c elastin
+%
+Get = PAR(1);						% circumferential deposition stretch elastin
+Gez = PAR(2);						% axial deposition stretch elastin
+Bt  = PAR(3);						% fraction of circumferential collagen within the adventitia
+Bz  = PAR(4);						% fraction of axial collagen within the adventitia
+alp = PAR(5);						% orientation of diagonal collagen wrt axial direction
+%
+betaM = [Bz 1-Bz];					% medial betas [bzM 2*bdM]
+betaA = [Bt Bz 1-Bt-Bz];			% adventitial betas [btA bzA 2*bdA]
+%
+%-------------------------------  STATE o  --------------------------------
+%
+%** parT0
+%
+c1m = parT0(1);						% c1t muscle
+c2m = parT0(2);						% c2t muscle
+c1c = parT0(3);						% c1t collagen
+c2c = parT0(4);						% c2t collagen
+Gm  = parT0(5);						% circumferential deposition stretch (combined medial collagen and smc)
+Gc  = parT0(6);						% deposition stretch (collagen)
+%
+c   = parT0(7);						% c elastin
+%
+%** emco and riio
+%
+phiMo = [emco(1:2) emco(3)*betaM];	% local mass fractions of medial [e mt cz 2*cd]
+phiAo = [emco(4)   emco(5)*betaA];	% local mass fractions of adventitial [e ct cz 2*cd]
+%
+rio  = riio(1);						% inner radius
+rMAo = riio(2);						% M-A radius
+roo  = riio(3);						% outer radius
+%
+lzoo = 1;							% axial stretch from o
+%
+hMo = rMAo-rio;						% medial thickness
+hAo = roo-rMAo;						% adventitial thickness
+%
+SMo = pi/lzoo*(rMAo^2-rio^2);		% medial cross-sectional area
+SAo = pi/lzoo*(roo^2-rMAo^2);		% adventitial cross-sectional area
+%
+Ge = [1/Get/Gez 1/Get/Gez Get Get Gez Gez];	% [GerM GerA GetM GetA GezM GezA]
+%
+stMo = phiMo(1)*c*(Ge(3)^2-Ge(1)^2) + ...
+	   phiMo(2)*c1m*(Gm^2-1)*exp(c2m*(Gm^2-1)^2)*Gm^2 + ...
+	   phiMo(4)*c1c*(Gc^2-1)*exp(c2c*(Gc^2-1)^2)*Gc^2*sin(alp)^2;
+%
+stAo = phiAo(1)*c*(Ge(4)^2-Ge(2)^2) + ...
+	   phiAo(2)*c1c*(Gc^2-1)*exp(c2c*(Gc^2-1)^2)*Gc^2 + ...
+	   phiAo(4)*c1c*(Gc^2-1)*exp(c2c*(Gc^2-1)^2)*Gc^2*sin(alp)^2;
+%
+PLo(1,1) = (stMo*hMo + stAo*hAo)/rio;   % Pressure
+%
+szMo = phiMo(1)*c*(Ge(5)^2-Ge(1)^2) + ...
+	   phiMo(3)*c1c*(Gc^2-1)*exp(c2c*(Gc^2-1)^2)*Gc^2 + ...
+	   phiMo(4)*c1c*(Gc^2-1)*exp(c2c*(Gc^2-1)^2)*Gc^2*cos(alp)^2;
+%
+szAo = phiAo(1)*c*(Ge(6)^2-Ge(2)^2) + ...
+	   phiAo(3)*c1c*(Gc^2-1)*exp(c2c*(Gc^2-1)^2)*Gc^2 + ...
+	   phiAo(4)*c1c*(Gc^2-1)*exp(c2c*(Gc^2-1)^2)*Gc^2*cos(alp)^2;
+%
+PLo(1,2) = szMo*SMo + szAo*SAo - pi*rio^2*PLo(1,1); % Transducer force
+%
+sto = (stMo*hMo+stAo*hAo)/(hMo+hAo);    % mean circ. stress
+szo = (szMo*SMo+szAo*SAo)/(SMo+SAo);    % mean axial stress
+%
+PPfo = [Po PLo(1,1) PLo(1,2)+pi*rio^2*PLo(1,1)]; % exp. P, P, F (vessel axial force)  
+so   = [stMo stAo szMo szAo sto szo sto+szo]; % stresses: layer-specific, mean, 1st invariant
+%
+% %-------------------------------  STATE h  --------------------------------
+% %
+% %** parT4
+% %
+% c1m = parT4(1);						% c1t muscle
+% c2m = parT4(2);						% c2t muscle
+% c1c = parT4(3);						% c1t collagen
+% c2c = parT4(4);						% c2t collagen
+% Gm  = parT4(5);						% circumferential deposition stretch (combined medial collagen and smc)
+% Gc  = parT4(6);						% deposition stretch (collagen)
+% %
+% c   = parT4(7);						% c elastin
+% %
+% %** emch and riih
+% %
+% phiMh = [emch(1:2) emch(3)*betaM];	% local mass fractions of medial [e mt cz 2*cd]
+% phiAh = [emch(4)   emch(5)*betaA];	% local mass fractions of adventitial [e ct cz 2*cd]
+% %
+% rih  = riih(1);						% inner radius
+% rMAh = riih(2);						% M-A radius
+% roh  = riih(3);						% outer radius
+% %
+% lzoh = 1;							% axial stretch from o
+% %
+% hMh = rMAh-rih;						% medial thickness
+% hAh = roh-rMAh;						% adventitial thickness
+% %
+% SMh = pi/lzoh*(rMAh^2-rih^2);		% medial cross-sectional area
+% SAh = pi/lzoh*(roh^2-rMAh^2);		% adventitial cross-sectional area
+% %
+% lrMoh = (rMAh-rih)/(rMAo-rio);		% radial stretch from o to h, media
+% lrAoh = (roh-rMAh)/(roo-rMAo);		% radial stretch from o to h, adventitia
+% %
+% ltMoh = (rMAh+rih)/(rMAo+rio);		% circum. stretch from o to h, media
+% ltAoh = (roh+rMAh)/(roo+rMAo);		% circum. stretch from o to h, adventitia
+% %
+% Ge = [1/Get/Gez*lrMoh 1/Get/Gez*lrAoh Get*ltMoh Get*ltAoh Gez*lzoh Gez*lzoh];	%* Foh*Ge
+% %
+% stMh = phiMh(1)*c*(Ge(3)^2-Ge(1)^2) + ...
+% 	   phiMh(2)*c1m*(Gm^2-1)*exp(c2m*(Gm^2-1)^2)*Gm^2 + ...
+% 	   phiMh(4)*c1c*(Gc^2-1)*exp(c2c*(Gc^2-1)^2)*Gc^2*sin(alp)^2;
+% %
+% stAh = phiAh(1)*c*(Ge(4)^2-Ge(2)^2) + ...
+% 	   phiAh(2)*c1c*(Gc^2-1)*exp(c2c*(Gc^2-1)^2)*Gc^2 + ...
+% 	   phiAh(4)*c1c*(Gc^2-1)*exp(c2c*(Gc^2-1)^2)*Gc^2*sin(alp)^2;
+% %
+% PLh(1,1) = (stMh*hMh + stAh*hAh)/rih;	% Pressure
+% %
+% szMh = phiMh(1)*c*(Ge(5)^2-Ge(1)^2) + ...
+% 	   phiMh(3)*c1c*(Gc^2-1)*exp(c2c*(Gc^2-1)^2)*Gc^2 + ...
+% 	   phiMh(4)*c1c*(Gc^2-1)*exp(c2c*(Gc^2-1)^2)*Gc^2*cos(alp)^2;
+% %
+% szAh = phiAh(1)*c*(Ge(6)^2-Ge(2)^2) + ...
+% 	   phiAh(3)*c1c*(Gc^2-1)*exp(c2c*(Gc^2-1)^2)*Gc^2 + ...
+% 	   phiAh(4)*c1c*(Gc^2-1)*exp(c2c*(Gc^2-1)^2)*Gc^2*cos(alp)^2;
+% %
+% PLh(1,2) = szMh*SMh + szAh*SAh - pi*rih^2*PLh(1,1); % Transducer force
+% %
+% sth = (stMh*hMh+stAh*hAh)/(hMh+hAh);    % mean circ. stress
+% szh = (szMh*SMh+szAh*SAh)/(SMh+SAh);    % mean axial stress
+% %
+% PPfh = [Ph PLh(1,1) PLh(1,2)+pi*rih^2*PLh(1,1)]; % exp. P, P, F (vessel axial force) 
+% sh   = [stMh stAh szMh szAh sth szh sth+szh]; % stresses: layer-specific, mean, 1st invariant
+%
+fprintf('szo sto =\n %10.2f %10.2f\n',szo,sto);
+% fprintf('szo sto szh sth =\n%10.2f %10.2f %10.2f %10.2f\n',szo,sto,szh,sth);
